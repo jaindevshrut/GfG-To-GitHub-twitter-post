@@ -1,3 +1,24 @@
+// Include html2canvas
+const captureScreenshot = (elementSelector) => {
+  const targetElement = document.querySelector(elementSelector);
+
+  if (!targetElement) {
+      console.error('Target element not found!');
+      return;
+  }
+
+  // Use html2canvas to capture the screenshot
+  html2canvas(targetElement).then((canvas) => {
+      const imageData = canvas.toDataURL('image/png');
+
+      // Send the screenshot data to the background script for further processing
+      chrome.runtime.sendMessage({ type: 'captureScreenshot', image: imageData }, function (response) {
+          console.log('Screenshot captured and sent to background:', response);
+      });
+  });
+};
+
+
 const codeLanguage = {
   C: '.c',
   'C++': '.cpp',
@@ -39,16 +60,16 @@ const uploadToGitHubRepository = (
 
         chrome.storage.local.get('userStatistics', (statistics) => {
           let { userStatistics } = statistics;
-          if (userStatistics === null || userStatistics === {} || userStatistics === undefined) {
-
-            userStatistics = {};
-            userStatistics.solved = 0;
-            userStatistics.school = 0;
-            userStatistics.basic = 0;
-            userStatistics.easy = 0;
-            userStatistics.medium = 0;
-            userStatistics.hard = 0;
-            userStatistics.sha = {};
+          if (!userStatistics || Object.keys(userStatistics).length === 0) {
+            userStatistics = {
+              solved: 0,
+              school: 0,
+              basic: 0,
+              easy: 0,
+              medium: 0,
+              hard: 0,
+              sha: {},
+            };
 
           }
           const githubFilePath = problemTitle + uploadFileName;
@@ -196,10 +217,11 @@ const loader = setInterval(() => {
   let problemDifficulty = null;
   let solutionLanguage = null;
   let solution = null;
-
+document.addEventListener("DOMContentLoaded", () => {
   if (window.location.href.includes('www.geeksforgeeks.org/problems',) || window.location.href.includes('practice.geeksforgeeks.org/problems',)) {
-
-    const gfgSubmitButton = document.querySelector('[class^="ui button problems_submit_button"]');
+    
+    const gfgSubmitButton = document.querySelector('.problems_submit_button__6QoNQ');
+    console.log('GfG Submit Button:', gfgSubmitButton);
 
     gfgSubmitButton.addEventListener('click', function () {
       document.querySelector('.problems_header_menu__items__BUrou').click();
@@ -209,6 +231,23 @@ const loader = setInterval(() => {
         const submissionResult = document.querySelectorAll('[class^="problems_content"]')[0].innerText;
         if (submissionResult.includes('Problem Solved Successfully') && successfulSubmissionFlag) {
           successfulSubmissionFlag = false;
+
+           // Capture screenshot
+          captureScreenshot('.problems_header_content__title');
+
+
+          chrome.runtime.sendMessage(
+            {
+                type: 'captureScreenshot',
+                image: imageDataUrl,
+                problemTitle: getProblemTitle(),
+            },response => {
+              if (response.success) {
+                  console.log('Posted to Twitter successfully!');
+              } else {
+                  console.error('Failed to post to Twitter:', response.error);
+              }
+          });
           clearInterval(loader);
           clearInterval(submissionLoader);
           document.querySelector('.problems_header_menu__items__BUrou').click();
@@ -270,12 +309,12 @@ const loader = setInterval(() => {
                         problemDifficulty,
                       );
                     }
-                  }, 1000);
+                  }, 100);
                 }
                 chrome.runtime.sendMessage({ type:'deleteNode'}, function() {
                   console.log("deleteNode - Message Sent.");
                 });
-              }, 1000);
+              }, 100);
             });
           });
           }
@@ -288,7 +327,8 @@ const loader = setInterval(() => {
         else if (!successfulSubmissionFlag && (submissionResult.includes('Compilation Error') || submissionResult.includes('Correct Answer'))) {
           clearInterval(submissionLoader);
         }
-      }, 1000);
+      }, 100);
     });
   }
-}, 1000);
+});
+}, 100);

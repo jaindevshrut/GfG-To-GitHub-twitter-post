@@ -2,8 +2,8 @@ const localSetupInit = {
 
   init() {
     this.githubUserToken = 'githubAccessToken';
-    this.OAuthClientID = ''; //Fill your OAuth Client ID here
-    this.OAuthClientSecret = ''; //Fill your OAuth Client Secret here
+    this.OAuthClientID = 'Ov23lies3Nan3x8kDQjR'; //Fill your OAuth Client ID here
+    this.OAuthClientSecret = 'd9c225c2458b1cee4ade33b2a6a94d2cc0730016'; //Fill your OAuth Client Secret here
     this.githubAccessTokenURL = 'https://github.com/login/oauth/access_token';
   },
 
