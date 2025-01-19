@@ -1,24 +1,3 @@
-// Include html2canvas
-const captureScreenshot = (elementSelector) => {
-  const targetElement = document.querySelector(elementSelector);
-
-  if (!targetElement) {
-      console.error('Target element not found!');
-      return;
-  }
-
-  // Use html2canvas to capture the screenshot
-  html2canvas(targetElement).then((canvas) => {
-      const imageData = canvas.toDataURL('image/png');
-
-      // Send the screenshot data to the background script for further processing
-      chrome.runtime.sendMessage({ type: 'captureScreenshot', image: imageData }, function (response) {
-          console.log('Screenshot captured and sent to background:', response);
-      });
-  });
-};
-
-
 const codeLanguage = {
   C: '.c',
   'C++': '.cpp',
@@ -211,124 +190,133 @@ function getCompanyAndTopicTags(problemStatement) {
   return problemStatement;
 }
 
+function tweet() {
+  console.log('Tweeting...');
+  const myHeaders = new Headers();
+  myHeaders.append("Content-Type", "application/json");
+  myHeaders.append("Authorization", 'OAuth oauth_consumer_key="uPW6nwNKruHxu1EMSBlQs5qIo",oauth_token="1853744895707746304-d78UQ527owMPlojgJgf05HQvINadCF",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1737191495",oauth_nonce="lBT5O18DAfw",oauth_version="1.0",oauth_signature="gjoz8%2FCkSgxVIU%2BDmwTz8CKFBMQ%3D'    
+  );
+  myHeaders.append("Cookie", "guest_id=v1%3A173718923229151193");
+  
+  const raw = JSON.stringify({
+    "text": `Hello! ${getProblemTitle()}! Difficulty: ${getProblemDifficulty()}. Check it out here: ${window.location.href}`
+  });
+  
+  const requestOptions = {
+    method: "POST",
+    headers: myHeaders,
+    body: raw,
+    redirect: "follow"
+  };
+  
+  fetch("https://api.twitter.com/2/tweets", requestOptions)
+    .then((response) => response.text())
+    .then((result) => console.log(result))
+    .catch((error) => console.error(error));
+    }
+
 const loader = setInterval(() => {
   let problemTitle = null;
   let problemStatement = null;
   let problemDifficulty = null;
   let solutionLanguage = null;
   let solution = null;
-document.addEventListener("DOMContentLoaded", () => {
-  if (window.location.href.includes('www.geeksforgeeks.org/problems',) || window.location.href.includes('practice.geeksforgeeks.org/problems',)) {
-    
-    const gfgSubmitButton = document.querySelector('.problems_submit_button__6QoNQ');
-    console.log('GfG Submit Button:', gfgSubmitButton);
 
-    gfgSubmitButton.addEventListener('click', function () {
-      document.querySelector('.problems_header_menu__items__BUrou').click();
-      successfulSubmissionFlag = true;
+  document.addEventListener("DOMContentLoaded", () => {
+    if (window.location.href.includes('www.geeksforgeeks.org/problems') || window.location.href.includes('practice.geeksforgeeks.org/problems')) {
 
-      const submissionLoader = setInterval(() => {
-        const submissionResult = document.querySelectorAll('[class^="problems_content"]')[0].innerText;
-        if (submissionResult.includes('Problem Solved Successfully') && successfulSubmissionFlag) {
-          successfulSubmissionFlag = false;
+      const gfgSubmitButton = document.querySelector('.problems_submit_button__6QoNQ');
+      console.log('GfG Submit Button:', gfgSubmitButton);
 
-           // Capture screenshot
-          captureScreenshot('.problems_header_content__title');
+      gfgSubmitButton.addEventListener('click', function () {
+        tweet();
+        document.querySelector('.problems_header_menu__items__BUrou').click();
+        successfulSubmissionFlag = true;
 
+        const submissionLoader = setInterval(() => {
+          const submissionResult = document.querySelectorAll('[class^="problems_content"]')[0].innerText;
+          if (submissionResult.includes('Problem Solved Successfully') && successfulSubmissionFlag) {
+            successfulSubmissionFlag = false;
 
-          chrome.runtime.sendMessage(
-            {
-                type: 'captureScreenshot',
-                image: imageDataUrl,
-                problemTitle: getProblemTitle(),
-            },response => {
-              if (response.success) {
-                  console.log('Posted to Twitter successfully!');
-              } else {
-                  console.error('Failed to post to Twitter:', response.error);
-              }
-          });
-          clearInterval(loader);
-          clearInterval(submissionLoader);
-          document.querySelector('.problems_header_menu__items__BUrou').click();
-          problemTitle = getProblemTitle().trim();
-          problemDifficulty = getProblemDifficulty();
-          problemStatement = getProblemStatement();
-          solutionLanguage = getSolutionLanguage();
-          console.log("Initialised Upload Variables");
+            document.querySelector('.problems_header_menu__items__BUrou').click();
+            problemTitle = getProblemTitle().trim();
+            problemDifficulty = getProblemDifficulty();
+            problemStatement = getProblemStatement();
+            solutionLanguage = getSolutionLanguage();
+            console.log("Initialised Upload Variables");
 
-          const probName = `${problemTitle}`;
-          var questionUrl = window.location.href;
-          problemStatement = `<h2><a href="${questionUrl}">${problemTitle}</a></h2><h3>Difficulty Level : ${problemDifficulty}</h3><hr>${problemStatement}`;
-          problemStatement = getCompanyAndTopicTags(problemStatement);
+            const probName = `${problemTitle}`;
+            var questionUrl = window.location.href;
+            problemStatement = `<h2><a href="${questionUrl}">${problemTitle}</a></h2><h3>Difficulty Level : ${problemDifficulty}</h3><hr>${problemStatement}`;
+            problemStatement = getCompanyAndTopicTags(problemStatement);
 
-          if (solutionLanguage !== null) {
-            chrome.storage.local.get('userStatistics', (statistics) => {
-              const { userStatistics } = statistics;
-              const githubFilePath = probName + convertToKebabCase(problemTitle + solutionLanguage);
-              let sha = null;
-              if (
-                userStatistics !== undefined &&
-                userStatistics.sha !== undefined &&
-                userStatistics.sha[githubFilePath] !== undefined
-                ) {
-                  sha = userStatistics.sha[githubFilePath];
-                }
-                if(sha === null){
-                  uploadGitHub(
-                    btoa(unescape(encodeURIComponent(problemStatement))),
-                    probName,
-                    'README.md',
-                    "Create README - GfG to GitHub",
-                    problemDifficulty,
-                  );
-                }
-                
-                chrome.runtime.sendMessage({ type:'getUserSolution'}, function(res) {
-                
-                console.log("getUserSolution - Message Sent.");
-                setTimeout(function () {
-                solution = document.getElementById('extractedUserSolution').innerText;
-                if (solution !== '') {
+            if (solutionLanguage !== null) {
+              chrome.storage.local.get('userStatistics', (statistics) => {
+                const { userStatistics } = statistics;
+                const githubFilePath = probName + convertToKebabCase(problemTitle + solutionLanguage);
+                let sha = null;
+                if (
+                  userStatistics !== undefined &&
+                  userStatistics.sha !== undefined &&
+                  userStatistics.sha[githubFilePath] !== undefined
+                  ) {
+                    sha = userStatistics.sha[githubFilePath];
+                  }
+                  if(sha === null){
+                    uploadGitHub(
+                      btoa(unescape(encodeURIComponent(problemStatement))),
+                      probName,
+                      'README.md',
+                      "Create README - GfG to GitHub",
+                      problemDifficulty,
+                    );
+                  }
+
+                  chrome.runtime.sendMessage({ type:'getUserSolution'}, function(res) {
+
+                  console.log("getUserSolution - Message Sent.");
                   setTimeout(function () {
-                    if(sha === null){
-                      uploadGitHub(
-                        btoa(unescape(encodeURIComponent(solution))),
-                        probName,
-                        convertToKebabCase(problemTitle + solutionLanguage),
-                        "Added Solution - GfG to GitHub",
-                        problemDifficulty,
-                      );
-                    }
-                    else{
-                      uploadGitHub(
-                        btoa(unescape(encodeURIComponent(solution))),
-                        probName,
-                        convertToKebabCase(problemTitle + solutionLanguage),
-                        "Updated Solution - GfG to GitHub",
-                        problemDifficulty,
-                      );
-                    }
-                  }, 100);
-                }
-                chrome.runtime.sendMessage({ type:'deleteNode'}, function() {
-                  console.log("deleteNode - Message Sent.");
-                });
-              }, 100);
+                  solution = document.getElementById('extractedUserSolution').innerText;
+                  if (solution !== '') {
+                    setTimeout(function () {
+                      if(sha === null){
+                        uploadGitHub(
+                          btoa(unescape(encodeURIComponent(solution))),
+                          probName,
+                          convertToKebabCase(problemTitle + solutionLanguage),
+                          "Added Solution - GfG to GitHub",
+                          problemDifficulty,
+                        );
+                      }
+                      else{
+                        uploadGitHub(
+                          btoa(unescape(encodeURIComponent(solution))),
+                          probName,
+                          convertToKebabCase(problemTitle + solutionLanguage),
+                          "Updated Solution - GfG to GitHub",
+                          problemDifficulty,
+                        );
+                      }
+                    }, 100);
+                  }
+                  chrome.runtime.sendMessage({ type:'deleteNode'}, function() {
+                    console.log("deleteNode - Message Sent.");
+                  });
+                }, 100);
+              });
             });
-          });
+            }
+          } 
+
+          else if (submissionResult.includes('Compilation Error')) {
+            clearInterval(submissionLoader);
+          } 
+
+          else if (!successfulSubmissionFlag && (submissionResult.includes('Compilation Error') || submissionResult.includes('Correct Answer'))) {
+            clearInterval(submissionLoader);
           }
-        } 
-        
-        else if (submissionResult.includes('Compilation Error')) {
-          clearInterval(submissionLoader);
-        } 
-        
-        else if (!successfulSubmissionFlag && (submissionResult.includes('Compilation Error') || submissionResult.includes('Correct Answer'))) {
-          clearInterval(submissionLoader);
-        }
-      }, 100);
-    });
-  }
-});
+        }, 100);
+      });
+    }
+  });
 }, 100);

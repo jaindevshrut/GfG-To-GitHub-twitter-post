@@ -30,7 +30,7 @@
         "https://www.geeksforgeeks.org/*"
       ],
       "web_accessible_resources": [{
-        "resources": ["scripts/extractCode.js","script/nodeDeletion.js","scripts/html2canvas.min.js"],
+        "resources": ["scripts/extractCode.js","script/nodeDeletion.js"],
         "matches": ["https://practice.geeksforgeeks.org/*","https://www.geeksforgeeks.org/*"]
       }],
       "content_scripts": [
@@ -42,8 +42,7 @@
           ],
           "js": [
             "scripts/localSetup.js",
-            "scripts/geeksForGeeks.js",
-            "scripts/html2canvas.min.js"
+            "scripts/geeksForGeeks.js"
           ],
           "run_at": "document_idle"
         }
